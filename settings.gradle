@@ -1,0 +1,2 @@
+include ':app', ':reflect-lib', ':ltepatch'
+project(':reflect-lib').projectDir = new File(settingsDir, 'library/reflect-lib')
