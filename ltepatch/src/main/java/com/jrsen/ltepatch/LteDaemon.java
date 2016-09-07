@@ -3,7 +3,7 @@ package com.jrsen.ltepatch;
 import android.content.Context;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.SystemClock;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 /**
@@ -11,50 +11,50 @@ import android.util.Log;
  */
 public final class LteDaemon implements Runnable {
 
-    private static final long WAIT_LTE_READY_DELAY = 10000l;
+    private static final String LOG_TAG = "LTE";
+    private static final long WAIT_LTE_READY_DELAY = 8 * 1000l;
 
-    private final String[] args;
+    public static final int ERROR_UNKNOW = 1;
+    public static final int ERROR_NO_LTE = 2;
 
     public static void main(String[] args) {
-        new LteDaemon(args).run();
-    }
-
-    public LteDaemon(String[] args) {
-        this.args = args;
+        new LteDaemon().run();
     }
 
     @Override
     public void run() {
-        log("LTE-DAEMON", "auto lte daemon start...");
-
         try {
-            IBinder service = ServiceManager.getService.invoke(Context.TELEPHONY_SERVICE);
-            Object iTelephony = ITelephony_L.Stub.asInterface.invoke(service);
+            Log.i(LOG_TAG, "lte daemon running...");
+
+            IBinder telService = ServiceManager.getService.invoke(Context.TELEPHONY_SERVICE);
+            Object iTelephony = ITelephony_L.Stub.asInterface.invoke(telService);
 
             // save previous preferred network type
             int preferredNetworkType = getPreferredNetwork(iTelephony);
-            log("LTE-DAEMON", "network type = " + preferredNetworkType);
+            Log.i(LOG_TAG, "previous network type = " + preferredNetworkType);
 
             // switch to lte network type
             boolean successful = setPreferredNetworkType(iTelephony, RILConstants.NETWORK_MODE_LTE_ONLY.get());
-            log("LTE-DAEMON", "changed = " + successful + " new network type = " + getPreferredNetwork(iTelephony));
+            Log.i(LOG_TAG, "changed = " + successful + " new network type = " + getPreferredNetwork(iTelephony));
 
             if (successful) {
                 //wait to lte network prepare
-                SystemClock.sleep(WAIT_LTE_READY_DELAY);
-
-//                int dataNetworkType = getDataNetworkType(iTelephony);
-//                System.out.println("current dataNetworkType = " + dataNetworkType);
-//                boolean isLTE = dataNetworkType == TelephonyManager.NETWORK_TYPE_LTE;
-//                if (isLTE) {
+                Thread.sleep(WAIT_LTE_READY_DELAY);
 
                 //restore network type
                 boolean result = setPreferredNetworkType(iTelephony, preferredNetworkType);
-                log("LTE-DAEMON", "restore success = " + result + " new network type = " + getPreferredNetwork(iTelephony));
+                Log.i(LOG_TAG, "restore success = " + result + " new network type = " + getPreferredNetwork(iTelephony));
+
+                int networkType = ITelephony_L.getNetworkType.invoke(iTelephony);
+                boolean isLte = networkType == TelephonyManager.NETWORK_TYPE_LTE;
+                Log.i(LOG_TAG, "current dataNetworkType = " + networkType + " is lte = " + isLte);
+                if (!isLte) {
+                    System.exit(ERROR_NO_LTE);
+                }
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            log("LTE-DAEMON", "Exception:" + Log.getStackTraceString(e));
+            Log.i(LOG_TAG, "Exception:" + Log.getStackTraceString(e));
+            System.exit(ERROR_UNKNOW);
         }
     }
 
@@ -76,8 +76,4 @@ public final class LteDaemon implements Runnable {
         }
     }
 
-    private void log(String tag, String msg) {
-        Log.i(tag, msg);
-        System.out.println(msg);
-    }
 }

@@ -16,6 +16,8 @@ public final class ITelephony_L {
     @ClassParams({int.class})
     public static Method<Boolean> setPreferredNetworkType;
 
+    public static Method<Integer> getNetworkType;
+
     static {
         Reflection.init("com.android.internal.telephony.ITelephony", ITelephony_L.class);
     }
