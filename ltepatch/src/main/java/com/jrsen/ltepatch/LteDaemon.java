@@ -3,7 +3,6 @@ package com.jrsen.ltepatch;
 import android.content.Context;
 import android.os.Build;
 import android.os.IBinder;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 
 /**
@@ -12,10 +11,8 @@ import android.util.Log;
 public final class LteDaemon implements Runnable {
 
     private static final String LOG_TAG = "LTE";
-    private static final long WAIT_LTE_READY_DELAY = 8 * 1000l;
-
-    public static final int ERROR_UNKNOW = 1;
-    public static final int ERROR_NO_LTE = 2;
+    private static final long WAIT_LTE_READY_DELAY = 7 * 1000l;
+    private static final long WAIT_RESTORE_DELAY = 5 * 1000l;
 
     public static void main(String[] args) {
         new LteDaemon().run();
@@ -26,8 +23,8 @@ public final class LteDaemon implements Runnable {
         try {
             Log.i(LOG_TAG, "lte daemon running...");
 
-            IBinder telService = ServiceManager.getService.invoke(Context.TELEPHONY_SERVICE);
-            Object iTelephony = ITelephony_L.Stub.asInterface.invoke(telService);
+            IBinder service = ServiceManager.getService.invoke(Context.TELEPHONY_SERVICE);
+            Object iTelephony = ITelephony_L.Stub.asInterface.invoke(service);
 
             // save previous preferred network type
             int preferredNetworkType = getPreferredNetwork(iTelephony);
@@ -45,16 +42,12 @@ public final class LteDaemon implements Runnable {
                 boolean result = setPreferredNetworkType(iTelephony, preferredNetworkType);
                 Log.i(LOG_TAG, "restore success = " + result + " new network type = " + getPreferredNetwork(iTelephony));
 
-                int networkType = ITelephony_L.getNetworkType.invoke(iTelephony);
-                boolean isLte = networkType == TelephonyManager.NETWORK_TYPE_LTE;
-                Log.i(LOG_TAG, "current dataNetworkType = " + networkType + " is lte = " + isLte);
-                if (!isLte) {
-                    System.exit(ERROR_NO_LTE);
-                }
+                //wait to restore orig network type
+                Thread.sleep(WAIT_RESTORE_DELAY);
             }
         } catch (Exception e) {
             Log.i(LOG_TAG, "Exception:" + Log.getStackTraceString(e));
-            System.exit(ERROR_UNKNOW);
+            System.exit(1);
         }
     }
 
